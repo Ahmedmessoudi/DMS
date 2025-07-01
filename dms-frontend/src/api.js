@@ -1,76 +1,90 @@
-// src/api.js
 import axios from 'axios';
 
+// Create axios instance with base configuration
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api', // Added /api prefix which is common for backend APIs
-  timeout: 10000, // Set timeout to 10 seconds
+  baseURL: 'http://localhost:5000', // Corrected base URL to match Flask backend
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// Add Authorization header with token
-API.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Add response interceptor to handle errors globally
-API.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      console.error('API Error:', error.response.data);
-      
-      if (error.response.status === 401) {
-        // Handle unauthorized access (token expired, invalid, etc.)
-        localStorage.removeItem('token');
-        window.location.href = '/login'; // Redirect to login
-      }
-    } else if (error.request) {
-      // The request was made but no response was received
-      console.error('API Error: No response received', error.request);
-    } else {
-      // Something happened in setting up the request that triggered an Error
-      console.error('API Error:', error.message);
+// Add request interceptor to include auth token
+API.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    
+    return config;
+  },
+  (error) => {
     return Promise.reject(error);
   }
 );
 
-// Folder-related API endpoints
-const folders = {
-  getAll: () => API.get('/folders'),
-  create: (folderData) => API.post('/folders', folderData),
-  update: (id, folderData) => API.put(`/folders/${id}`, folderData),
-  delete: (id) => API.delete(`/folders/${id}`),
-  getById: (id) => API.get(`/folders/${id}`),
-};
+// Add response interceptor to handle errors
+API.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    console.error('API Error:', error.response?.data || error.message);
+    return Promise.reject(error);
+  }
+);
 
 // User-related API endpoints
 const users = {
-  login: (credentials) => API.post('/auth/login', credentials),
-  verifyToken: () => API.get('/auth/verify'),
+  login: (credentials) => API.post('/login', credentials),
+  verifyToken: () => API.get('/verify'),
 };
 
-// Document-related API endpoints
+// Admin user management endpoints
+const admin = {
+  getUsers: () => API.get('/admin/users'),
+  createUser: (userData) => API.post('/admin/users', userData),
+  updateUser: (userId, userData) => API.put(`/admin/users/${userId}`, userData),
+  deleteUser: (userId) => API.delete(`/admin/users/${userId}`),
+};
+
+// Company management endpoints
+const companies = {
+  getAll: () => API.get('/companies'),
+  create: (companyData) => API.post('/companies', companyData),
+};
+
+// Document management endpoints
 const documents = {
-  upload: (fileData) => API.post('/documents', fileData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  }),
-  getByFolder: (folderId) => API.get(`/documents?folder_id=${folderId}`),
-};
-// Create a named object before exporting
-const apiInstance = {
-  ...API,
-  folders,
-  users,
-  documents
+  getByCompany: (companyId, documentType = null) => {
+    const params = documentType ? `?company_id=${companyId}&document_type=${documentType}` : `?company_id=${companyId}`;
+    return API.get(`/documents${params}`);
+  },
+  create: (documentData) => API.post('/documents', documentData),
+  getHistory: (documentId) => API.get(`/documents/${documentId}/history`),
+  update: (documentId, documentData) => API.put(`/documents/${documentId}`, documentData),
+  delete: (documentId) => API.delete(`/documents/${documentId}`),
 };
 
-export default apiInstance;
+// Folder management endpoints
+const folders = {
+  getByCompany: (companyId, parentId = null) => {
+    const params = parentId ? `?company_id=${companyId}&parent_id=${parentId}` : `?company_id=${companyId}`;
+    return API.get(`/folders${params}`);
+  },
+  create: (folderData) => API.post('/folders', folderData),
+  update: (folderId, folderData) => API.put(`/folders/${folderId}`, folderData),
+  delete: (folderId) => API.delete(`/folders/${folderId}`),
+};
+
+// Export the API instance and endpoint groups
+export default {
+  ...API,
+  users,
+  admin,
+  companies,
+  documents,
+  folders,
+};
+

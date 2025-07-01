@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const NavBar = ({ user, onLogout }) => {
@@ -36,6 +36,14 @@ const NavBar = ({ user, onLogout }) => {
             </svg>
             Dashboard
           </Link>
+          {user && user.role === 'admin' && (
+            <Link to="/admin/users" className="nav-btn" style={{ textDecoration: 'none', color: 'inherit' }}>
+              <svg className="nav-icon" viewBox="0 0 24 24">
+                <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+              </svg>
+              Ajouter Utilisateur
+            </Link>
+          )}
         </nav>
       </div>
 
@@ -46,11 +54,11 @@ const NavBar = ({ user, onLogout }) => {
           style={{ cursor: 'pointer' }}
         >
           <div className="user-avatar">
-            {user.username.charAt(0).toUpperCase()}
+            {user?.username?.charAt(0).toUpperCase() || 'U'}
           </div>
           <div className="user-details">
-            <span className="username">{user.username}</span>
-            <span className="user-role">{user.role}</span>
+            <span className="username">{user?.username || 'User'}</span>
+            <span className="user-role">{user?.role || 'user'}</span>
           </div>
           <svg 
             className={`dropdown-arrow ${showDropdown ? 'open' : ''}`} 

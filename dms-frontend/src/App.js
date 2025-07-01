@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import API from './api';
@@ -8,7 +8,9 @@ import Sidebar from './components/Sidebar';
 import DocumentArchive from './components/DocumentArchive';
 import Settings from './components/Settings';
 import Profile from './components/Profile';
+import AdminUsers from './components/AdminUsers';
 import './App.css';
+
 
 function App() {
   const [user, setUser] = useState(null);
@@ -16,7 +18,7 @@ function App() {
 
   // Memoized devBypass configuration
   const devBypass = React.useMemo(() => ({
-    enabled: process.env.NODE_ENV === 'development',
+    enabled: false, // Disabled development bypass
     user: {
       id: 1,
       username: 'devadmin',
@@ -29,14 +31,21 @@ function App() {
   const verifyToken = useCallback(async (token) => {
     try {
       const decoded = jwtDecode(token);
-      await API.users.verifyToken();
-      setUser(decoded);
+      // Use the username from 'sub' and additional claims for user info
+      const userInfo = {
+        id: decoded.id,
+        username: decoded.sub,
+        role: decoded.role
+      };
+      setUser(userInfo);
       setAuthError('');
     } catch (e) {
       localStorage.removeItem('token');
       setAuthError('Invalid token. Please login again.');
+      setUser(null);
     }
-  }, []);
+  }, []); 
+  
 
   useEffect(() => {
     if (devBypass.enabled && !localStorage.getItem('token')) {
@@ -75,7 +84,7 @@ function App() {
   return (
     <Router>
       <div className="app-container">
-        <NavBar user={user} onLogout={handleLogout} />
+        {user && <NavBar user={user} onLogout={handleLogout} />}
         
         <div className="main-content">
           <Sidebar isAdmin={user?.role === 'admin'} userId={user?.id} />
@@ -84,6 +93,9 @@ function App() {
             <Route path="/" element={<DocumentArchive user={user} />} />
             <Route path="/settings" element={<Settings user={user} />} />
             <Route path="/profile" element={<Profile user={user} />} />
+            {user?.role === 'admin' && (
+              <Route path="/admin/users" element={<AdminUsers />} />
+            )}
           </Routes>
         </div>
       </div>

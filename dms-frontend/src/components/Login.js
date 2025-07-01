@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import API from '../api';
 import { jwtDecode } from 'jwt-decode';
-import '../Login.css'; // We'll create this CSS file
+import '../Login.css'; 
 
 const Login = ({ onLogin }) => {
   const [formData, setFormData] = useState({ username: '', password: '' });
@@ -21,11 +21,11 @@ const Login = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
-      const res = await API.post('/login', formData);
+      const res = await API.users.login(formData);
       const token = res.data.access_token;
       localStorage.setItem('token', token);
       const user = jwtDecode(token);
-      onLogin(user);
+      onLogin(user.sub); // JWT payload is in 'sub' field
     } catch (err) {
       setError('Invalid credentials. Please try again.');
     } finally {
